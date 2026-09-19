@@ -28,7 +28,7 @@
       <!-- Scrollable Row -->
       <div
         ref="scrollContainer"
-        class="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-2"
+        class="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide scroll-smooth py-2 px-2"
         @scroll="updateScrollState"
       >
         <!-- Loading Skeletons -->
