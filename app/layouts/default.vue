@@ -5,6 +5,7 @@
       <slot />
     </main>
     <AppFooter />
+    <MovieDetailModal />
   </div>
 </template>
 

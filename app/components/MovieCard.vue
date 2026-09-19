@@ -2,6 +2,7 @@
   <div
     class="group relative flex-shrink-0 cursor-pointer transition-transform duration-300 ease-out hover:scale-105 hover:z-10"
     :style="{ width: cardWidth }"
+    @click="openModal"
   >
     <!-- Poster -->
     <div class="relative aspect-[2/3] rounded-lg overflow-hidden bg-surface-700">
@@ -70,6 +71,8 @@
 import { getImageUrl, formatRating, extractYear, getGenreNames } from '~/utils/tmdb'
 import type { TmdbMovie, TmdbGenre } from '~/composables/useTmdb'
 
+const { open } = useMovieModal()
+
 interface Props {
   movie: TmdbMovie
   genres: TmdbGenre[]
@@ -84,4 +87,8 @@ const props = withDefaults(defineProps<Props>(), {
 const movieGenreNames = computed(() => {
   return getGenreNames(props.movie.genre_ids, props.genres).slice(0, 2)
 })
+
+function openModal() {
+  open(props.movie, props.genres)
+}
 </script>

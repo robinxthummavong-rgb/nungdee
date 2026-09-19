@@ -104,3 +104,81 @@ export function useMovieVideos(movieId: number) {
     tmdbFetch<TmdbVideosResponse>(`movie/${movieId}/videos`),
   )
 }
+
+// ─── Movie Details ──────────────────────────────────────────
+
+export interface TmdbMovieDetail extends TmdbMovie {
+  runtime: number | null
+  tagline: string
+  genres: TmdbGenre[]
+  status: string
+  budget: number
+  revenue: number
+  production_companies: { id: number; name: string; logo_path: string | null }[]
+}
+
+export interface TmdbCastMember {
+  id: number
+  name: string
+  character: string
+  profile_path: string | null
+  order: number
+}
+
+export interface TmdbCrewMember {
+  id: number
+  name: string
+  job: string
+  department: string
+  profile_path: string | null
+}
+
+interface TmdbCreditsResponse {
+  id: number
+  cast: TmdbCastMember[]
+  crew: TmdbCrewMember[]
+}
+
+export function useMovieDetail(movieId: Ref<number | null>) {
+  return useAsyncData(
+    () => `movie-detail-${movieId.value}`,
+    () => {
+      if (!movieId.value) return Promise.resolve(null)
+      return tmdbFetch<TmdbMovieDetail>(`movie/${movieId.value}`)
+    },
+    { watch: [movieId] },
+  )
+}
+
+export function useMovieCredits(movieId: Ref<number | null>) {
+  return useAsyncData(
+    () => `movie-credits-${movieId.value}`,
+    () => {
+      if (!movieId.value) return Promise.resolve(null)
+      return tmdbFetch<TmdbCreditsResponse>(`movie/${movieId.value}/credits`)
+    },
+    { watch: [movieId] },
+  )
+}
+
+export function useSimilarMovies(movieId: Ref<number | null>) {
+  return useAsyncData(
+    () => `similar-movies-${movieId.value}`,
+    () => {
+      if (!movieId.value) return Promise.resolve(null)
+      return tmdbFetch<TmdbListResponse>(`movie/${movieId.value}/similar`)
+    },
+    { watch: [movieId] },
+  )
+}
+
+export function useMovieVideosDynamic(movieId: Ref<number | null>) {
+  return useAsyncData(
+    () => `movie-videos-dynamic-${movieId.value}`,
+    () => {
+      if (!movieId.value) return Promise.resolve(null)
+      return tmdbFetch<TmdbVideosResponse>(`movie/${movieId.value}/videos`)
+    },
+    { watch: [movieId] },
+  )
+}
