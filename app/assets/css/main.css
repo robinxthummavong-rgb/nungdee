@@ -1,0 +1,159 @@
+@import "tailwindcss";
+
+/* ============================================
+   DungDee — Blue Theme Design Tokens
+   ============================================ */
+
+@theme {
+  /* Primary Blue Palette */
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-400: #60a5fa;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-primary-800: #1e40af;
+  --color-primary-900: #1e3a8a;
+  --color-primary-950: #172554;
+
+  /* Surface / Background Colors */
+  --color-surface-900: #0a0e1a;
+  --color-surface-800: #0f1629;
+  --color-surface-700: #151d38;
+  --color-surface-600: #1c2646;
+  --color-surface-500: #243055;
+
+  /* Accent */
+  --color-accent: #38bdf8;
+  --color-accent-hover: #7dd3fc;
+}
+
+/* ============================================
+   Base Styles
+   ============================================ */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-surface-900);
+  color: #e2e8f0;
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+/* ============================================
+   Custom Scrollbar (Webkit)
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.5);
+}
+
+/* Hide scrollbar on movie rows for clean look */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+
+.gradient-overlay-bottom {
+  background: linear-gradient(
+    to top,
+    var(--color-surface-900) 0%,
+    rgba(10, 14, 26, 0.85) 30%,
+    rgba(10, 14, 26, 0.4) 60%,
+    transparent 100%
+  );
+}
+
+.gradient-overlay-left {
+  background: linear-gradient(
+    to right,
+    var(--color-surface-900) 0%,
+    rgba(10, 14, 26, 0.8) 40%,
+    transparent 100%
+  );
+}
+
+.text-gradient-blue {
+  background: linear-gradient(135deg, #60a5fa, #38bdf8, #818cf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.glass {
+  background: rgba(15, 22, 41, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.7s ease-out both;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out both;
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-700) 25%,
+    var(--color-surface-600) 50%,
+    var(--color-surface-700) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
