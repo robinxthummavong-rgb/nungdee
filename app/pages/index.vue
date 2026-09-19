@@ -2,9 +2,8 @@
   <div>
     <!-- Hero Banner — featured trending movie -->
     <HeroBanner :movie="heroMovie" :genres="genreList" />
-
     <!-- Movie Row Sections -->
-    <div class="-mt-20 relative z-10 space-y-2">
+    <div class="-mt-6 sm:-mt-20 relative z-10 space-y-2">
       <MovieRow
         title="🔥 Trending This Week"
         :movies="trendingMovies"
