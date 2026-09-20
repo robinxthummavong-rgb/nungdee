@@ -64,12 +64,14 @@
                 {{ movie?.title }}
               </h2>
               <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
-                <button
-                  class="flex items-center gap-2 px-5 sm:px-7 py-2 sm:py-2.5 bg-white text-surface-900 font-bold rounded-md hover:bg-gray-200 transition-all duration-200 text-sm sm:text-base"
+                <NuxtLink
+                  :to="`/play/${movie?.id}`"
+                  class="flex items-center gap-2 px-5 sm:px-7 py-2 sm:py-2.5 bg-white text-surface-900 font-bold rounded-md hover:bg-gray-200 transition-all duration-200 text-sm sm:text-base no-underline"
+                  @click="close"
                 >
                   <Icon name="mdi:play" class="text-xl" />
                   Play
-                </button>
+                </NuxtLink>
                 <button
                   class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full border-2 border-gray-400 hover:border-white text-gray-300 hover:text-white transition-all duration-200"
                   title="Add to My List"
