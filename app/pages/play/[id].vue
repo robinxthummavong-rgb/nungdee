@@ -13,6 +13,9 @@
       />
     </div>
 
+    <!-- Top overlay for move mouse for show/hide controll bar -->
+    <div class="fixed top-0 w-full h-24 z-30" @mousemove="showControls" @click="showControls" />
+
     <!-- Top Overlay Bar -->
     <Transition name="fade-slide-down">
       <div
@@ -130,6 +133,7 @@ let hideTimeout: ReturnType<typeof setTimeout> | null = null
 
 function showControls() {
   controlsVisible.value = true
+  document.body.style.cursor = ''
   resetHideTimer()
 }
 
@@ -137,7 +141,9 @@ function resetHideTimer() {
   if (hideTimeout) clearTimeout(hideTimeout)
   hideTimeout = setTimeout(() => {
     controlsVisible.value = false
-  }, 4000)
+    // Hide cursor when controls hide (Netflix-style)
+    document.body.style.cursor = 'none'
+  }, 3000)
 }
 
 // ─── Player Events (progress tracking) ────────────────────
@@ -184,6 +190,7 @@ onUnmounted(() => {
   if (hideTimeout) clearTimeout(hideTimeout)
   window.removeEventListener('message', handlePlayerEvent)
   document.body.style.overflow = ''
+  document.body.style.cursor = ''
 })
 </script>
 
