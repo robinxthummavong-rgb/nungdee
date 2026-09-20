@@ -27,8 +27,9 @@
           <div class="relative aspect-video w-full overflow-hidden">
             <!-- YouTube Trailer (if available) -->
             <iframe
+              ref="ytIframeRef"
               v-if="trailerKey"
-              :src="`https://www.youtube.com/embed/${trailerKey}?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&showinfo=0`"
+              :src="`https://www.youtube.com/embed/${trailerKey}?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&showinfo=0&enablejsapi=1`"
               class="absolute inset-0 w-full h-full"
               frameborder="0"
               allow="autoplay; encrypted-media"
@@ -45,6 +46,17 @@
 
             <!-- Bottom Gradient -->
             <div class="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-surface-900 via-surface-900/80 to-transparent" />
+
+            <!-- Mute/Unmute Button -->
+            <button
+              v-if="trailerKey"
+              class="absolute bottom-8 right-5 sm:bottom-12 sm:right-8 z-20 w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full border-2 border-gray-400 hover:border-white text-gray-300 hover:text-white transition-all duration-200 bg-surface-900/60 backdrop-blur-sm cursor-pointer"
+              :title="isMuted ? 'เปิดเสียง' : 'ปิดเสียง'"
+              :aria-label="isMuted ? 'Unmute' : 'Mute'"
+              @click.stop="toggleMute"
+            >
+              <Icon :name="isMuted ? 'mdi:volume-off' : 'mdi:volume-high'" class="text-lg" />
+            </button>
 
             <!-- Title & Buttons Overlay -->
             <div class="absolute bottom-0 left-0 right-0 p-5 sm:p-8">
@@ -282,6 +294,26 @@ function switchMovie(newMovie: TmdbMovie) {
 }
 
 const modalRef = ref<HTMLElement | null>(null)
+
+// ─── Mute/Unmute ───────────────────────────────────────────
+const ytIframeRef = ref<HTMLIFrameElement | null>(null)
+const isMuted = ref(true)
+
+function toggleMute() {
+  isMuted.value = !isMuted.value
+  const func = isMuted.value ? 'mute' : 'unMute'
+  ytIframeRef.value?.contentWindow?.postMessage(
+    JSON.stringify({ event: 'command', func, args: [] }),
+    '*',
+  )
+}
+
+// Reset mute state when modal reopens (iframe restarts muted)
+watch(() => modalState.isOpen, (isOpen) => {
+  if (isOpen) {
+    isMuted.value = true
+  }
+})
 
 // Close on Escape key
 function handleEscape(e: KeyboardEvent) {
