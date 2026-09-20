@@ -52,6 +52,10 @@
               <span v-if="mediaType === 'tv' && displayDetail.seasons" class="hidden sm:inline">
                 {{ displayDetail.seasons }} Season{{ displayDetail.seasons > 1 ? 's' : '' }}
               </span>
+              <span v-if="mediaType === 'tv' && currentSeason && currentEpisode" class="hidden sm:inline">·</span>
+              <span v-if="mediaType === 'tv' && currentSeason && currentEpisode" class="hidden sm:inline font-semibold text-white/70">
+                S{{ currentSeason }} · E{{ currentEpisode }}
+              </span>
             </div>
           </div>
         </div>
@@ -99,6 +103,8 @@ const mediaType = computed(() => {
 })
 const mediaId = computed(() => Number(route.params.id))
 const mediaIdRef = computed(() => mediaId.value || null)
+const currentSeason = computed(() => route.query.s ? String(route.query.s) : null)
+const currentEpisode = computed(() => route.query.e ? String(route.query.e) : null)
 
 // ─── Data Fetching ─────────────────────────────────────────
 
@@ -159,7 +165,15 @@ const playerSrc = computed(() => {
     savedProgress = localStorage.getItem(`watch_progress_${mediaType.value}_${id}`)
   }
 
-  const base = `https://vidsrc.sh/embed/${mediaType.value}/${id}`
+  let base = `https://vidsrc.sh/embed/${mediaType.value}/${id}`
+
+  // For TV shows, append season and episode if provided via query params
+  if (mediaType.value === 'tv') {
+    const season = route.query.s ? String(route.query.s) : '1'
+    const episode = route.query.e ? String(route.query.e) : '1'
+    base = `${base}/${season}/${episode}`
+  }
+
   const params = new URLSearchParams()
   params.set('autoplay', '1')
 

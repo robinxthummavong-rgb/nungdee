@@ -208,6 +208,35 @@ export interface TmdbTvDetail extends TmdbTvShow {
   episode_run_time: number[]
   status: string
   tagline: string
+  seasons: {
+    id: number
+    season_number: number
+    name: string
+    episode_count: number
+    air_date: string | null
+    poster_path: string | null
+    overview: string
+  }[]
+}
+
+export interface TmdbEpisode {
+  id: number
+  name: string
+  overview: string
+  episode_number: number
+  season_number: number
+  air_date: string | null
+  still_path: string | null
+  vote_average: number
+  runtime: number | null
+}
+
+export interface TmdbSeasonDetail {
+  id: number
+  name: string
+  overview: string
+  season_number: number
+  episodes: TmdbEpisode[]
 }
 
 // ─── TV Show Lists ──────────────────────────────────────────
@@ -295,6 +324,19 @@ export function useMediaVideos(mediaType: Ref<string>, mediaId: Ref<number | nul
       return tmdbFetch<TmdbVideosResponse>(`${type}/${mediaId.value}/videos`)
     },
     { watch: [mediaId, mediaType] },
+  )
+}
+
+// ─── TV Season Detail ───────────────────────────────────────
+
+export function useTvSeasonDetail(tvId: Ref<number | null>, seasonNumber: Ref<number>) {
+  return useAsyncData(
+    () => `tv-season-${tvId.value}-${seasonNumber.value}`,
+    () => {
+      if (!tvId.value) return Promise.resolve(null)
+      return tmdbFetch<TmdbSeasonDetail>(`tv/${tvId.value}/season/${seasonNumber.value}`)
+    },
+    { watch: [tvId, seasonNumber] },
   )
 }
 
