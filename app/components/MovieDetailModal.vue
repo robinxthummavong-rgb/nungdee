@@ -65,7 +65,7 @@
               </h2>
               <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
                 <NuxtLink
-                  :to="`/play/${movie?.id}`"
+                  :to="`/play/${modalState.mediaType}/${movie?.id}`"
                   class="flex items-center gap-2 px-5 sm:px-7 py-2 sm:py-2.5 bg-white text-surface-900 font-bold rounded-md hover:bg-gray-200 transition-all duration-200 text-sm sm:text-base no-underline"
                   @click="close"
                 >
@@ -210,34 +210,50 @@
 /**
  * MovieDetailModal
  *
- * Netflix-style popup modal that displays full movie details when a card is clicked.
+ * Netflix-style popup modal that displays full movie/TV details when a card is clicked.
  * Features:
  * - Backdrop / YouTube trailer hero
- * - Movie metadata (rating, year, runtime, genres)
+ * - Movie/TV metadata (rating, year, runtime, genres)
  * - Cast grid with profile images
- * - "More Like This" similar movies section
- * - Click a similar movie to swap in-place
+ * - "More Like This" similar titles section
+ * - Click a similar title to swap in-place
+ * - Supports both movies and TV shows via mediaType
  */
 import { getImageUrl, formatRating, extractYear } from '~/utils/tmdb'
 import type { TmdbMovie } from '~/composables/useTmdb'
+import { normalizeTvToMovie } from '~/composables/useTmdb'
 
 const { state: modalState, close, open } = useMovieModal()
 
 const movie = computed(() => modalState.movie)
 const genres = computed(() => modalState.genres)
+const mediaType = computed(() => modalState.mediaType)
 
 const movieId = computed(() => movie.value?.id ?? null)
 
-// ─── Data Fetching ─────────────────────────────────────────
+// ─── Data Fetching (generic — works for both movie and TV) ──
 
-const { data: detailData } = await useMovieDetail(movieId)
-const { data: creditsData } = await useMovieCredits(movieId)
-const { data: similarData } = await useSimilarMovies(movieId)
-const { data: videosData } = await useMovieVideosDynamic(movieId)
+const { data: detailData } = await useMediaDetail(mediaType, movieId)
+const { data: creditsData } = await useMediaCredits(mediaType, movieId)
+const { data: similarData } = await useMediaSimilar(mediaType, movieId)
+const { data: videosData } = await useMediaVideos(mediaType, movieId)
 
 // ─── Computed ──────────────────────────────────────────────
 
-const detail = computed(() => detailData.value)
+/** Normalize TV detail responses so template can use consistent fields */
+const detail = computed(() => {
+  const d = detailData.value
+  if (!d) return null
+  if (mediaType.value === 'tv') {
+    return {
+      ...d,
+      title: d.name ?? d.title,
+      release_date: d.first_air_date ?? d.release_date,
+      runtime: d.episode_run_time?.[0] ?? null,
+    }
+  }
+  return d
+})
 
 const trailerKey = computed(() => {
   const videos = videosData.value?.results ?? []
@@ -264,7 +280,7 @@ const director = computed(() => {
 
 const genreNames = computed(() => {
   if (detail.value?.genres) {
-    return detail.value.genres.map((g) => g.name)
+    return detail.value.genres.map((g: { name: string }) => g.name)
   }
   if (movie.value && genres.value.length > 0) {
     return movie.value.genre_ids
@@ -276,7 +292,12 @@ const genreNames = computed(() => {
 
 const similarMoviesList = computed(() => {
   const results = similarData.value?.results ?? []
-  return results.filter((m) => m.poster_path).slice(0, 10)
+  const filtered = results.filter((m: any) => m.poster_path).slice(0, 10)
+  // Normalize similar TV results to movie shape & tag with media_type
+  if (mediaType.value === 'tv') {
+    return filtered.map((m: any) => normalizeTvToMovie(m))
+  }
+  return filtered
 })
 
 // ─── Methods ───────────────────────────────────────────────

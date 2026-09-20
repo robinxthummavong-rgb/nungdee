@@ -182,3 +182,143 @@ export function useMovieVideosDynamic(movieId: Ref<number | null>) {
     { watch: [movieId] },
   )
 }
+
+// ─── TV Show Types ──────────────────────────────────────────
+
+export interface TmdbTvShow {
+  id: number
+  name: string
+  original_name: string
+  overview: string
+  poster_path: string | null
+  backdrop_path: string | null
+  first_air_date: string
+  vote_average: number
+  vote_count: number
+  genre_ids: number[]
+  popularity: number
+  adult: boolean
+  media_type?: string
+}
+
+export interface TmdbTvDetail extends TmdbTvShow {
+  genres: TmdbGenre[]
+  number_of_seasons: number
+  number_of_episodes: number
+  episode_run_time: number[]
+  status: string
+  tagline: string
+}
+
+// ─── TV Show Lists ──────────────────────────────────────────
+
+export function useTrendingTvShows() {
+  return useAsyncData('trending-tv', () =>
+    tmdbFetch<TmdbListResponse<TmdbTvShow>>('trending/tv/week'),
+  )
+}
+
+export function usePopularTvShows() {
+  return useAsyncData('popular-tv', () =>
+    tmdbFetch<TmdbListResponse<TmdbTvShow>>('tv/popular'),
+  )
+}
+
+export function useTopRatedTvShows() {
+  return useAsyncData('top-rated-tv', () =>
+    tmdbFetch<TmdbListResponse<TmdbTvShow>>('tv/top_rated'),
+  )
+}
+
+export function useAiringTodayTvShows() {
+  return useAsyncData('airing-today-tv', () =>
+    tmdbFetch<TmdbListResponse<TmdbTvShow>>('tv/airing_today'),
+  )
+}
+
+export function useOnTheAirTvShows() {
+  return useAsyncData('on-the-air-tv', () =>
+    tmdbFetch<TmdbListResponse<TmdbTvShow>>('tv/on_the_air'),
+  )
+}
+
+export function useTvGenres() {
+  return useAsyncData('tv-genres', () =>
+    tmdbFetch<TmdbGenreResponse>('genre/tv/list'),
+  )
+}
+
+// ─── Generic Media Composables (Movie / TV) ─────────────────
+
+export function useMediaDetail(mediaType: Ref<string>, mediaId: Ref<number | null>) {
+  return useAsyncData(
+    () => `${mediaType.value}-detail-${mediaId.value}`,
+    () => {
+      if (!mediaId.value) return Promise.resolve(null)
+      const type = mediaType.value === 'tv' ? 'tv' : 'movie'
+      return tmdbFetch<any>(`${type}/${mediaId.value}`)
+    },
+    { watch: [mediaId, mediaType] },
+  )
+}
+
+export function useMediaCredits(mediaType: Ref<string>, mediaId: Ref<number | null>) {
+  return useAsyncData(
+    () => `${mediaType.value}-credits-${mediaId.value}`,
+    () => {
+      if (!mediaId.value) return Promise.resolve(null)
+      const type = mediaType.value === 'tv' ? 'tv' : 'movie'
+      return tmdbFetch<TmdbCreditsResponse>(`${type}/${mediaId.value}/credits`)
+    },
+    { watch: [mediaId, mediaType] },
+  )
+}
+
+export function useMediaSimilar(mediaType: Ref<string>, mediaId: Ref<number | null>) {
+  return useAsyncData(
+    () => `${mediaType.value}-similar-${mediaId.value}`,
+    () => {
+      if (!mediaId.value) return Promise.resolve(null)
+      const type = mediaType.value === 'tv' ? 'tv' : 'movie'
+      return tmdbFetch<TmdbListResponse>(`${type}/${mediaId.value}/similar`)
+    },
+    { watch: [mediaId, mediaType] },
+  )
+}
+
+export function useMediaVideos(mediaType: Ref<string>, mediaId: Ref<number | null>) {
+  return useAsyncData(
+    () => `${mediaType.value}-videos-${mediaId.value}`,
+    () => {
+      if (!mediaId.value) return Promise.resolve(null)
+      const type = mediaType.value === 'tv' ? 'tv' : 'movie'
+      return tmdbFetch<TmdbVideosResponse>(`${type}/${mediaId.value}/videos`)
+    },
+    { watch: [mediaId, mediaType] },
+  )
+}
+
+// ─── Normalization ──────────────────────────────────────────
+
+/**
+ * Normalize a TV show object into the TmdbMovie shape so existing
+ * components (MovieCard, MovieRow, HeroBanner) can render it.
+ */
+export function normalizeTvToMovie(tv: TmdbTvShow): TmdbMovie {
+  return {
+    id: tv.id,
+    title: tv.name,
+    original_title: tv.original_name,
+    overview: tv.overview,
+    poster_path: tv.poster_path,
+    backdrop_path: tv.backdrop_path,
+    release_date: tv.first_air_date,
+    vote_average: tv.vote_average,
+    vote_count: tv.vote_count,
+    genre_ids: tv.genre_ids,
+    popularity: tv.popularity,
+    adult: tv.adult,
+    media_type: 'tv',
+  }
+}
+

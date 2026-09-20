@@ -30,9 +30,10 @@
             <NuxtLink
               :to="link.to"
               class="text-gray-300 hover:text-white transition-colors duration-200 relative group"
+              :class="route.path === link.to ? '' : ''"
             >
               {{ link.label }}
-              <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary-400 group-hover:w-full transition-all duration-300 rounded" />
+              <span :class="route.path === link.to ? 'absolute -bottom-1 left-0 w-full h-0.5 bg-primary-400 group-hover:w-full transition-all duration-300 rounded' : 'absolute -bottom-1 left-0 w-0 h-0.5 bg-primary-400 group-hover:w-full transition-all duration-300 rounded'" />
             </NuxtLink>
           </li>
         </ul>
@@ -116,10 +117,12 @@
  * - Transparent → solid background on scroll
  */
 
+ const route = useRoute()
+
 const navLinks = [
   { label: 'Home', to: '/' },
-  { label: 'Movies', to: '/' },
-  { label: 'TV Shows', to: '/' },
+  { label: 'Movies', to: '/movies' },
+  { label: 'TV Shows', to: '/tv' },
   { label: 'My List', to: '/' },
 ]
 

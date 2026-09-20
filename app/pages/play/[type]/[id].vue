@@ -3,7 +3,7 @@
     <!-- Full-screen Player -->
     <div class="fixed inset-0 bg-black z-0">
       <iframe
-        v-if="movieId"
+        v-if="mediaId"
         ref="playerIframe"
         :src="playerSrc"
         class="w-full h-full"
@@ -34,19 +34,23 @@
             <span class="hidden sm:inline text-sm font-medium">Back</span>
           </button>
 
-          <!-- Movie Title -->
-          <div v-if="detail" class="flex-1 min-w-0">
+          <!-- Title -->
+          <div v-if="displayDetail" class="flex-1 min-w-0">
             <h1 class="text-white text-sm sm:text-lg font-semibold truncate">
-              {{ detail.title }}
+              {{ displayDetail.title }}
             </h1>
             <div class="flex items-center gap-2 text-xs text-white/50">
-              <span v-if="detail.release_date">{{ extractYear(detail.release_date) }}</span>
-              <span v-if="detail.runtime" class="hidden sm:inline">·</span>
-              <span v-if="detail.runtime" class="hidden sm:inline">{{ formatRuntime(detail.runtime) }}</span>
-              <span v-if="detail.vote_average" class="hidden sm:inline">·</span>
-              <span v-if="detail.vote_average" class="hidden sm:inline flex items-center gap-0.5">
+              <span v-if="displayDetail.date">{{ extractYear(displayDetail.date) }}</span>
+              <span v-if="displayDetail.runtime" class="hidden sm:inline">·</span>
+              <span v-if="displayDetail.runtime" class="hidden sm:inline">{{ formatRuntime(displayDetail.runtime) }}</span>
+              <span v-if="displayDetail.rating" class="hidden sm:inline">·</span>
+              <span v-if="displayDetail.rating" class="hidden sm:inline flex items-center gap-0.5">
                 <Icon name="mdi:star" class="text-yellow-400 text-[10px]" />
-                {{ formatRating(detail.vote_average) }}
+                {{ formatRating(displayDetail.rating) }}
+              </span>
+              <span v-if="mediaType === 'tv' && displayDetail.seasons" class="hidden sm:inline">·</span>
+              <span v-if="mediaType === 'tv' && displayDetail.seasons" class="hidden sm:inline">
+                {{ displayDetail.seasons }} Season{{ displayDetail.seasons > 1 ? 's' : '' }}
               </span>
             </div>
           </div>
@@ -66,17 +70,20 @@
 
 <script setup lang="ts">
 /**
- * Play Page — /play/:id
+ * Play Page — /play/:type/:id
  *
- * Full-screen cinematic movie player using vidsrc.sh embed.
+ * Full-screen cinematic player using vidsrc.sh embed.
+ * Supports both movies and TV shows:
+ * - Movie: https://vidsrc.sh/embed/movie/{tmdb_id}
+ * - TV:    https://vidsrc.sh/embed/tv/{tmdb_id} (with built-in episode picker)
+ *
  * Features:
  * - Immersive full-viewport player
- * - Auto-hiding top bar with movie info and back button
+ * - Auto-hiding top bar with title and back button (3s timeout)
  * - Resume playback support via localStorage
  * - Player event listening for progress tracking
  */
 import { extractYear, formatRating } from '~/utils/tmdb'
-import type { TmdbMovieDetail } from '~/composables/useTmdb'
 
 // Use a blank layout (no navbar/footer)
 definePageMeta({
@@ -85,20 +92,57 @@ definePageMeta({
 
 const route = useRoute()
 const router = useRouter()
-const movieId = computed(() => Number(route.params.id))
+
+const mediaType = computed(() => {
+  const t = route.params.type as string
+  return t === 'tv' ? 'tv' : 'movie'
+})
+const mediaId = computed(() => Number(route.params.id))
+const mediaIdRef = computed(() => mediaId.value || null)
 
 // ─── Data Fetching ─────────────────────────────────────────
 
-const { data: detail, pending } = await useMovieDetail(computed(() => movieId.value))
+const { data: detailData, pending } = await useMediaDetail(mediaType, mediaIdRef)
+
+// ─── Normalized display detail ─────────────────────────────
+
+const displayDetail = computed(() => {
+  const d = detailData.value
+  if (!d) return null
+
+  if (mediaType.value === 'tv') {
+    return {
+      title: d.name ?? d.title ?? 'Untitled',
+      date: d.first_air_date ?? d.release_date,
+      runtime: d.episode_run_time?.[0] ?? null,
+      rating: d.vote_average,
+      overview: d.overview,
+      seasons: d.number_of_seasons ?? null,
+    }
+  }
+
+  return {
+    title: d.title ?? 'Untitled',
+    date: d.release_date,
+    runtime: d.runtime,
+    rating: d.vote_average,
+    overview: d.overview,
+    seasons: null,
+  }
+})
 
 // ─── SEO ───────────────────────────────────────────────────
 
 useHead({
-  title: computed(() => detail.value ? `${detail.value.title} — DungDee` : 'Playing — DungDee'),
+  title: computed(() =>
+    displayDetail.value
+      ? `${displayDetail.value.title} — DungDee`
+      : 'Playing — DungDee',
+  ),
   meta: [
     {
       name: 'description',
-      content: computed(() => detail.value?.overview ?? 'Watch now on DungDee'),
+      content: computed(() => displayDetail.value?.overview ?? 'Watch now on DungDee'),
     },
   ],
 })
@@ -106,16 +150,16 @@ useHead({
 // ─── Player Source ─────────────────────────────────────────
 
 const playerSrc = computed(() => {
-  const id = movieId.value
+  const id = mediaId.value
   if (!id) return ''
 
-  // Check for saved progress to resume
+  // Check for saved progress to resume (movies only — TV has built-in resume)
   let savedProgress: string | null = null
-  if (import.meta.client) {
-    savedProgress = localStorage.getItem(`watch_progress_${id}`)
+  if (import.meta.client && mediaType.value === 'movie') {
+    savedProgress = localStorage.getItem(`watch_progress_${mediaType.value}_${id}`)
   }
 
-  const base = `https://vidsrc.sh/embed/movie/${id}`
+  const base = `https://vidsrc.sh/embed/${mediaType.value}/${id}`
   const params = new URLSearchParams()
   params.set('autoplay', '1')
 
@@ -153,11 +197,11 @@ function handlePlayerEvent(event: MessageEvent) {
   const { player_status, player_progress } = event.data.data ?? {}
 
   if (player_status === 'playing' && player_progress != null) {
-    localStorage.setItem(`watch_progress_${movieId.value}`, String(player_progress))
+    localStorage.setItem(`watch_progress_${mediaType.value}_${mediaId.value}`, String(player_progress))
   }
 
   if (player_status === 'completed') {
-    localStorage.removeItem(`watch_progress_${movieId.value}`)
+    localStorage.removeItem(`watch_progress_${mediaType.value}_${mediaId.value}`)
   }
 }
 
@@ -182,7 +226,6 @@ function goBack() {
 onMounted(() => {
   resetHideTimer()
   window.addEventListener('message', handlePlayerEvent)
-  // Hide cursor when controls are hidden
   document.body.style.overflow = 'hidden'
 })
 
