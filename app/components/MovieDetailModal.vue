@@ -27,8 +27,9 @@
           <div class="relative aspect-video w-full overflow-hidden">
             <!-- YouTube Trailer (if available) -->
             <iframe
+              ref="ytIframeRef"
               v-if="trailerKey"
-              :src="`https://www.youtube.com/embed/${trailerKey}?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&showinfo=0`"
+              :src="`https://www.youtube.com/embed/${trailerKey}?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&showinfo=0&enablejsapi=1`"
               class="absolute inset-0 w-full h-full"
               frameborder="0"
               allow="autoplay; encrypted-media"
@@ -46,18 +47,31 @@
             <!-- Bottom Gradient -->
             <div class="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-surface-900 via-surface-900/80 to-transparent" />
 
+            <!-- Mute/Unmute Button -->
+            <button
+              v-if="trailerKey"
+              class="absolute bottom-8 right-5 sm:bottom-12 sm:right-8 z-20 w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full border-2 border-gray-400 hover:border-white text-gray-300 hover:text-white transition-all duration-200 bg-surface-900/60 backdrop-blur-sm cursor-pointer"
+              :title="isMuted ? 'เปิดเสียง' : 'ปิดเสียง'"
+              :aria-label="isMuted ? 'Unmute' : 'Mute'"
+              @click.stop="toggleMute"
+            >
+              <Icon :name="isMuted ? 'mdi:volume-off' : 'mdi:volume-high'" class="text-lg" />
+            </button>
+
             <!-- Title & Buttons Overlay -->
             <div class="absolute bottom-0 left-0 right-0 p-5 sm:p-8">
               <h2 class="text-2xl sm:text-4xl font-extrabold tracking-tight leading-tight mb-3 drop-shadow-lg">
                 {{ movie?.title }}
               </h2>
               <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
-                <button
-                  class="flex items-center gap-2 px-5 sm:px-7 py-2 sm:py-2.5 bg-white text-surface-900 font-bold rounded-md hover:bg-gray-200 transition-all duration-200 text-sm sm:text-base"
+                <NuxtLink
+                  :to="`/play/${modalState.mediaType}/${movie?.id}`"
+                  class="flex items-center gap-2 px-5 sm:px-7 py-2 sm:py-2.5 bg-white text-surface-900 font-bold rounded-md hover:bg-gray-200 transition-all duration-200 text-sm sm:text-base no-underline"
+                  @click="close"
                 >
                   <Icon name="mdi:play" class="text-xl" />
                   Play
-                </button>
+                </NuxtLink>
                 <button
                   class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full border-2 border-gray-400 hover:border-white text-gray-300 hover:text-white transition-all duration-200"
                   title="Add to My List"
@@ -196,34 +210,50 @@
 /**
  * MovieDetailModal
  *
- * Netflix-style popup modal that displays full movie details when a card is clicked.
+ * Netflix-style popup modal that displays full movie/TV details when a card is clicked.
  * Features:
  * - Backdrop / YouTube trailer hero
- * - Movie metadata (rating, year, runtime, genres)
+ * - Movie/TV metadata (rating, year, runtime, genres)
  * - Cast grid with profile images
- * - "More Like This" similar movies section
- * - Click a similar movie to swap in-place
+ * - "More Like This" similar titles section
+ * - Click a similar title to swap in-place
+ * - Supports both movies and TV shows via mediaType
  */
 import { getImageUrl, formatRating, extractYear } from '~/utils/tmdb'
 import type { TmdbMovie } from '~/composables/useTmdb'
+import { normalizeTvToMovie } from '~/composables/useTmdb'
 
 const { state: modalState, close, open } = useMovieModal()
 
 const movie = computed(() => modalState.movie)
 const genres = computed(() => modalState.genres)
+const mediaType = computed(() => modalState.mediaType)
 
 const movieId = computed(() => movie.value?.id ?? null)
 
-// ─── Data Fetching ─────────────────────────────────────────
+// ─── Data Fetching (generic — works for both movie and TV) ──
 
-const { data: detailData } = await useMovieDetail(movieId)
-const { data: creditsData } = await useMovieCredits(movieId)
-const { data: similarData } = await useSimilarMovies(movieId)
-const { data: videosData } = await useMovieVideosDynamic(movieId)
+const { data: detailData } = await useMediaDetail(mediaType, movieId)
+const { data: creditsData } = await useMediaCredits(mediaType, movieId)
+const { data: similarData } = await useMediaSimilar(mediaType, movieId)
+const { data: videosData } = await useMediaVideos(mediaType, movieId)
 
 // ─── Computed ──────────────────────────────────────────────
 
-const detail = computed(() => detailData.value)
+/** Normalize TV detail responses so template can use consistent fields */
+const detail = computed(() => {
+  const d = detailData.value
+  if (!d) return null
+  if (mediaType.value === 'tv') {
+    return {
+      ...d,
+      title: d.name ?? d.title,
+      release_date: d.first_air_date ?? d.release_date,
+      runtime: d.episode_run_time?.[0] ?? null,
+    }
+  }
+  return d
+})
 
 const trailerKey = computed(() => {
   const videos = videosData.value?.results ?? []
@@ -250,7 +280,7 @@ const director = computed(() => {
 
 const genreNames = computed(() => {
   if (detail.value?.genres) {
-    return detail.value.genres.map((g) => g.name)
+    return detail.value.genres.map((g: { name: string }) => g.name)
   }
   if (movie.value && genres.value.length > 0) {
     return movie.value.genre_ids
@@ -262,7 +292,12 @@ const genreNames = computed(() => {
 
 const similarMoviesList = computed(() => {
   const results = similarData.value?.results ?? []
-  return results.filter((m) => m.poster_path).slice(0, 10)
+  const filtered = results.filter((m: any) => m.poster_path).slice(0, 10)
+  // Normalize similar TV results to movie shape & tag with media_type
+  if (mediaType.value === 'tv') {
+    return filtered.map((m: any) => normalizeTvToMovie(m))
+  }
+  return filtered
 })
 
 // ─── Methods ───────────────────────────────────────────────
@@ -282,6 +317,26 @@ function switchMovie(newMovie: TmdbMovie) {
 }
 
 const modalRef = ref<HTMLElement | null>(null)
+
+// ─── Mute/Unmute ───────────────────────────────────────────
+const ytIframeRef = ref<HTMLIFrameElement | null>(null)
+const isMuted = ref(true)
+
+function toggleMute() {
+  isMuted.value = !isMuted.value
+  const func = isMuted.value ? 'mute' : 'unMute'
+  ytIframeRef.value?.contentWindow?.postMessage(
+    JSON.stringify({ event: 'command', func, args: [] }),
+    '*',
+  )
+}
+
+// Reset mute state when modal reopens (iframe restarts muted)
+watch(() => modalState.isOpen, (isOpen) => {
+  if (isOpen) {
+    isMuted.value = true
+  }
+})
 
 // Close on Escape key
 function handleEscape(e: KeyboardEvent) {

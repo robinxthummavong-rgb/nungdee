@@ -71,12 +71,13 @@
 
       <!-- Buttons -->
       <div class="flex items-center gap-2 sm:gap-3 animate-fade-in-up" style="animation-delay: 0.3s">
-        <button
-          class="flex items-center justify-center gap-1.5 sm:gap-2 flex-1 sm:flex-none px-4 sm:px-6 py-2 sm:py-2.5 bg-white text-surface-900 font-semibold rounded-lg hover:bg-gray-200 transition-all duration-200 text-xs sm:text-base"
+        <NuxtLink
+          :to="`/play/${mediaType}/${movie.id}`"
+          class="flex items-center justify-center gap-1.5 sm:gap-2 flex-1 sm:flex-none px-4 sm:px-6 py-2 sm:py-2.5 bg-white text-surface-900 font-semibold rounded-lg hover:bg-gray-200 transition-all duration-200 text-xs sm:text-base no-underline"
         >
           <Icon name="mdi:play" class="text-lg sm:text-xl" />
           Play
-        </button>
+        </NuxtLink>
         <button
           class="flex items-center justify-center gap-1.5 sm:gap-2 flex-1 sm:flex-none px-4 sm:px-6 py-2 sm:py-2.5 glass text-white font-semibold rounded-lg hover:bg-white/20 transition-all duration-200 text-xs sm:text-base"
         >
@@ -112,11 +113,13 @@ import { getImageUrl, formatRating, extractYear, truncateText, getGenreNames } f
 interface Props {
   movie: import('~/composables/useTmdb').TmdbMovie | null
   genres: import('~/composables/useTmdb').TmdbGenre[]
+  mediaType?: 'movie' | 'tv'
 }
 
 const props = withDefaults(defineProps<Props>(), {
   movie: null,
   genres: () => [],
+  mediaType: 'movie',
 })
 
 const movieGenres = computed(() => {
