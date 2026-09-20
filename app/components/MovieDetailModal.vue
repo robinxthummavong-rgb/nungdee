@@ -151,12 +151,13 @@
 
               <!-- Episodes List -->
               <div v-else-if="episodes.length > 0" class="space-y-3">
-                <div
+                <NuxtLink
                   v-for="ep in episodes"
                   :key="ep.id"
-                  class="group/ep flex gap-3 sm:gap-4 p-3 rounded-lg hover:bg-surface-700/60 transition-all duration-200 cursor-pointer"
+                  :to="`/play/tv/${movie?.id}?s=${selectedSeason}&e=${ep.episode_number}`"
+                  class="group/ep flex gap-3 sm:gap-4 p-3 rounded-lg hover:bg-surface-700/60 transition-all duration-200 cursor-pointer no-underline text-inherit"
                   :class="{ 'bg-surface-700/40 ring-1 ring-primary-500/30': selectedEpisode === ep.episode_number }"
-                  @click="selectEpisode(ep.episode_number)"
+                  @click="playEpisode(ep.episode_number)"
                 >
                   <!-- Episode Number -->
                   <div class="flex items-center justify-center w-7 shrink-0 text-gray-500 text-lg font-medium">
@@ -197,7 +198,7 @@
                       {{ ep.overview || 'No description available.' }}
                     </p>
                   </div>
-                </div>
+                </NuxtLink>
               </div>
 
               <!-- No Episodes -->
@@ -426,8 +427,10 @@ const episodes = computed(() => {
   return seasonDetailData.value?.episodes ?? []
 })
 
-function selectEpisode(epNum: number) {
+
+function playEpisode(epNum: number) {
   selectedEpisode.value = epNum
+  close()
 }
 
 /** Build the play link — includes season/episode for TV shows */
