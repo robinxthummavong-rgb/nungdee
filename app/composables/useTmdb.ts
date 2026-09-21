@@ -51,43 +51,43 @@ interface TmdbVideosResponse {
   results: TmdbVideo[]
 }
 
-/** Default query params sent with every TMDB request. */
-const defaultQuery = { language: 'en-US' }
+/** Shared options for every TMDB useFetch call. `lazy` keeps navigation instant. */
+const defaultOpts = { query: { language: 'en-US' }, lazy: true } as const
 
 // ─── Movie Lists ────────────────────────────────────────────
 
 export function useTrendingMovies() {
   return useFetch<TmdbListResponse>('/api/tmdb/trending/movie/week', {
     key: 'trending-movies',
-    query: defaultQuery,
+    ...defaultOpts,
   })
 }
 
 export function usePopularMovies() {
   return useFetch<TmdbListResponse>('/api/tmdb/movie/popular', {
     key: 'popular-movies',
-    query: defaultQuery,
+    ...defaultOpts,
   })
 }
 
 export function useTopRatedMovies() {
   return useFetch<TmdbListResponse>('/api/tmdb/movie/top_rated', {
     key: 'top-rated-movies',
-    query: defaultQuery,
+    ...defaultOpts,
   })
 }
 
 export function useUpcomingMovies() {
   return useFetch<TmdbListResponse>('/api/tmdb/movie/upcoming', {
     key: 'upcoming-movies',
-    query: defaultQuery,
+    ...defaultOpts,
   })
 }
 
 export function useNowPlayingMovies() {
   return useFetch<TmdbListResponse>('/api/tmdb/movie/now_playing', {
     key: 'now-playing-movies',
-    query: defaultQuery,
+    ...defaultOpts,
   })
 }
 
@@ -96,14 +96,14 @@ export function useNowPlayingMovies() {
 export function useMovieGenres() {
   return useFetch<TmdbGenreResponse>('/api/tmdb/genre/movie/list', {
     key: 'movie-genres',
-    query: defaultQuery,
+    ...defaultOpts,
   })
 }
 
 export function useMovieVideos(movieId: number) {
   return useFetch<TmdbVideosResponse>(`/api/tmdb/movie/${movieId}/videos`, {
     key: `movie-videos-${movieId}`,
-    query: defaultQuery,
+    ...defaultOpts,
   })
 }
 
@@ -147,7 +147,7 @@ export function useMovieDetail(movieId: Ref<number | null>) {
   )
   return useFetch<TmdbMovieDetail>(url as ComputedRef<string>, {
     key: computed(() => `movie-detail-${movieId.value}`) as unknown as string,
-    query: defaultQuery,
+    ...defaultOpts,
     watch: [movieId],
   })
 }
@@ -158,7 +158,7 @@ export function useMovieCredits(movieId: Ref<number | null>) {
   )
   return useFetch<TmdbCreditsResponse>(url as ComputedRef<string>, {
     key: computed(() => `movie-credits-${movieId.value}`) as unknown as string,
-    query: defaultQuery,
+    ...defaultOpts,
     watch: [movieId],
   })
 }
@@ -169,7 +169,7 @@ export function useSimilarMovies(movieId: Ref<number | null>) {
   )
   return useFetch<TmdbListResponse>(url as ComputedRef<string>, {
     key: computed(() => `similar-movies-${movieId.value}`) as unknown as string,
-    query: defaultQuery,
+    ...defaultOpts,
     watch: [movieId],
   })
 }
@@ -180,7 +180,7 @@ export function useMovieVideosDynamic(movieId: Ref<number | null>) {
   )
   return useFetch<TmdbVideosResponse>(url as ComputedRef<string>, {
     key: computed(() => `movie-videos-dynamic-${movieId.value}`) as unknown as string,
-    query: defaultQuery,
+    ...defaultOpts,
     watch: [movieId],
   })
 }
@@ -246,42 +246,42 @@ export interface TmdbSeasonDetail {
 export function useTrendingTvShows() {
   return useFetch<TmdbListResponse<TmdbTvShow>>('/api/tmdb/trending/tv/week', {
     key: 'trending-tv',
-    query: defaultQuery,
+    ...defaultOpts,
   })
 }
 
 export function usePopularTvShows() {
   return useFetch<TmdbListResponse<TmdbTvShow>>('/api/tmdb/tv/popular', {
     key: 'popular-tv',
-    query: defaultQuery,
+    ...defaultOpts,
   })
 }
 
 export function useTopRatedTvShows() {
   return useFetch<TmdbListResponse<TmdbTvShow>>('/api/tmdb/tv/top_rated', {
     key: 'top-rated-tv',
-    query: defaultQuery,
+    ...defaultOpts,
   })
 }
 
 export function useAiringTodayTvShows() {
   return useFetch<TmdbListResponse<TmdbTvShow>>('/api/tmdb/tv/airing_today', {
     key: 'airing-today-tv',
-    query: defaultQuery,
+    ...defaultOpts,
   })
 }
 
 export function useOnTheAirTvShows() {
   return useFetch<TmdbListResponse<TmdbTvShow>>('/api/tmdb/tv/on_the_air', {
     key: 'on-the-air-tv',
-    query: defaultQuery,
+    ...defaultOpts,
   })
 }
 
 export function useTvGenres() {
   return useFetch<TmdbGenreResponse>('/api/tmdb/genre/tv/list', {
     key: 'tv-genres',
-    query: defaultQuery,
+    ...defaultOpts,
   })
 }
 
@@ -295,7 +295,7 @@ export function useMediaDetail(mediaType: Ref<string>, mediaId: Ref<number | nul
   })
   return useFetch<any>(url as ComputedRef<string>, {
     key: computed(() => `${mediaType.value}-detail-${mediaId.value}`) as unknown as string,
-    query: defaultQuery,
+    ...defaultOpts,
     watch: [mediaId, mediaType],
   })
 }
@@ -308,7 +308,7 @@ export function useMediaCredits(mediaType: Ref<string>, mediaId: Ref<number | nu
   })
   return useFetch<TmdbCreditsResponse>(url as ComputedRef<string>, {
     key: computed(() => `${mediaType.value}-credits-${mediaId.value}`) as unknown as string,
-    query: defaultQuery,
+    ...defaultOpts,
     watch: [mediaId, mediaType],
   })
 }
@@ -321,7 +321,7 @@ export function useMediaSimilar(mediaType: Ref<string>, mediaId: Ref<number | nu
   })
   return useFetch<TmdbListResponse>(url as ComputedRef<string>, {
     key: computed(() => `${mediaType.value}-similar-${mediaId.value}`) as unknown as string,
-    query: defaultQuery,
+    ...defaultOpts,
     watch: [mediaId, mediaType],
   })
 }
@@ -334,7 +334,7 @@ export function useMediaVideos(mediaType: Ref<string>, mediaId: Ref<number | nul
   })
   return useFetch<TmdbVideosResponse>(url as ComputedRef<string>, {
     key: computed(() => `${mediaType.value}-videos-${mediaId.value}`) as unknown as string,
-    query: defaultQuery,
+    ...defaultOpts,
     watch: [mediaId, mediaType],
   })
 }
@@ -347,7 +347,7 @@ export function useTvSeasonDetail(tvId: Ref<number | null>, seasonNumber: Ref<nu
   )
   return useFetch<TmdbSeasonDetail>(url as ComputedRef<string>, {
     key: computed(() => `tv-season-${tvId.value}-${seasonNumber.value}`) as unknown as string,
-    query: defaultQuery,
+    ...defaultOpts,
     watch: [tvId, seasonNumber],
   })
 }
