@@ -48,15 +48,64 @@
                 <Icon name="mdi:star" class="text-yellow-400 text-[10px]" />
                 {{ formatRating(displayDetail.rating) }}
               </span>
-              <span v-if="mediaType === 'tv' && displayDetail.seasons" class="hidden sm:inline">·</span>
-              <span v-if="mediaType === 'tv' && displayDetail.seasons" class="hidden sm:inline">
-                {{ displayDetail.seasons }} Season{{ displayDetail.seasons > 1 ? 's' : '' }}
-              </span>
-              <span v-if="mediaType === 'tv' && currentSeason && currentEpisode" class="hidden sm:inline">·</span>
-              <span v-if="mediaType === 'tv' && currentSeason && currentEpisode" class="hidden sm:inline font-semibold text-white/70">
-                S{{ currentSeason }} · E{{ currentEpisode }}
-              </span>
             </div>
+          </div>
+
+          <!-- Season / Episode Selectors (TV only) -->
+          <div v-if="mediaType === 'tv' && tvSeasons.length > 0" class="flex items-center gap-2 shrink-0">
+            <!-- Season Selector -->
+            <div class="relative">
+              <select
+                :value="selectedSeason"
+                class="ep-select appearance-none bg-white/10 hover:bg-white/20 backdrop-blur-md text-white text-xs sm:text-sm font-medium pl-3 pr-7 py-1.5 sm:py-2 rounded-lg border border-white/15 cursor-pointer transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+                @change="onSeasonChange(($event.target as HTMLSelectElement).value)"
+              >
+                <option
+                  v-for="season in tvSeasons"
+                  :key="season.season_number"
+                  :value="season.season_number"
+                >
+                  {{ season.name }}
+                </option>
+              </select>
+              <Icon name="mdi:chevron-down" class="absolute right-2 top-1/2 -translate-y-1/2 text-white/60 pointer-events-none text-xs" />
+            </div>
+
+            <!-- Episode Selector -->
+            <div class="relative">
+              <select
+                :value="selectedEpisode"
+                class="ep-select appearance-none bg-white/10 hover:bg-white/20 backdrop-blur-md text-white text-xs sm:text-sm font-medium pl-3 pr-7 py-1.5 sm:py-2 rounded-lg border border-white/15 cursor-pointer transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+                @change="onEpisodeChange(($event.target as HTMLSelectElement).value)"
+              >
+                <option
+                  v-for="ep in episodes"
+                  :key="ep.id"
+                  :value="ep.episode_number"
+                >
+                  E{{ ep.episode_number }} · {{ ep.name }}
+                </option>
+              </select>
+              <Icon name="mdi:chevron-down" class="absolute right-2 top-1/2 -translate-y-1/2 text-white/60 pointer-events-none text-xs" />
+            </div>
+
+            <!-- Prev / Next Episode Buttons -->
+            <button
+              class="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white/70 hover:text-white transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+              :disabled="!hasPrevEpisode"
+              title="Previous Episode"
+              @click="goToPrevEpisode"
+            >
+              <Icon name="mdi:skip-previous" class="text-lg" />
+            </button>
+            <button
+              class="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white/70 hover:text-white transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+              :disabled="!hasNextEpisode"
+              title="Next Episode"
+              @click="goToNextEpisode"
+            >
+              <Icon name="mdi:skip-next" class="text-lg" />
+            </button>
           </div>
         </div>
       </div>
@@ -88,6 +137,7 @@
  * - Player event listening for progress tracking
  */
 import { extractYear, formatRating } from '~/utils/tmdb'
+import { useTvSeasonDetail } from '~/composables/useTmdb'
 
 // Use a blank layout (no navbar/footer)
 definePageMeta({
@@ -109,6 +159,59 @@ const currentEpisode = computed(() => route.query.e ? String(route.query.e) : nu
 // ─── Data Fetching ─────────────────────────────────────────
 
 const { data: detailData, pending } = await useMediaDetail(mediaType, mediaIdRef)
+
+// ─── TV Season / Episode Data ──────────────────────────────
+
+const selectedSeason = ref(Number(currentSeason.value) || 1)
+const selectedEpisode = ref(Number(currentEpisode.value) || 1)
+
+const tvSeasons = computed(() => {
+  const d = detailData.value
+  if (!d || mediaType.value !== 'tv') return []
+  const seasons = d.seasons ?? []
+  return seasons.filter((s: any) => s.season_number > 0 || seasons.length === 1)
+})
+
+const tvIdForSeason = computed(() => mediaType.value === 'tv' ? mediaIdRef.value : null)
+const seasonRef = computed(() => selectedSeason.value)
+const { data: seasonDetailData } = await useTvSeasonDetail(tvIdForSeason, seasonRef)
+
+const episodes = computed(() => seasonDetailData.value?.episodes ?? [])
+
+const hasPrevEpisode = computed(() => selectedEpisode.value > 1)
+const hasNextEpisode = computed(() => selectedEpisode.value < episodes.value.length)
+
+function navigateToEpisode(season: number, episode: number) {
+  selectedSeason.value = season
+  selectedEpisode.value = episode
+  navigateTo(`/play/tv/${mediaId.value}?s=${season}&e=${episode}`, { replace: true })
+}
+
+function onSeasonChange(val: string) {
+  navigateToEpisode(Number(val), 1)
+}
+
+function onEpisodeChange(val: string) {
+  navigateToEpisode(selectedSeason.value, Number(val))
+}
+
+function goToPrevEpisode() {
+  if (hasPrevEpisode.value) {
+    navigateToEpisode(selectedSeason.value, selectedEpisode.value - 1)
+  }
+}
+
+function goToNextEpisode() {
+  if (hasNextEpisode.value) {
+    navigateToEpisode(selectedSeason.value, selectedEpisode.value + 1)
+  }
+}
+
+// Sync from route query when navigating
+watch(() => route.query, (q) => {
+  if (q.s) selectedSeason.value = Number(q.s)
+  if (q.e) selectedEpisode.value = Number(q.e)
+})
 
 // ─── Normalized display detail ─────────────────────────────
 
@@ -267,6 +370,12 @@ onUnmounted(() => {
     transparent 100%
   );
   pointer-events: auto;
+}
+
+/* Style select dropdown options (dark bg for dark UI) */
+.ep-select option {
+  background: #1a1a2e;
+  color: #fff;
 }
 
 /* Transition: fade + slide down from top */
