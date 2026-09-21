@@ -1,7 +1,7 @@
 /**
  * TMDB Data Fetching Composables
  *
- * Wrappers around `useAsyncData` + `$fetch` that call our server proxy at /api/tmdb/*.
+ * Wrappers around `useFetch` that call our server proxy at /api/tmdb/*.
  * Each composable returns the standard Nuxt async data shape: { data, pending, error }.
  */
 
@@ -51,58 +51,60 @@ interface TmdbVideosResponse {
   results: TmdbVideo[]
 }
 
-/**
- * Internal helper — fetch from our server proxy.
- */
-function tmdbFetch<T>(path: string, params?: Record<string, string>) {
-  const query = new URLSearchParams({ language: 'en-US', ...params }).toString()
-  return $fetch<T>(`/api/tmdb/${path}?${query}`)
-}
+/** Shared options for every TMDB useFetch call. `lazy` keeps navigation instant. */
+const defaultOpts = { query: { language: 'en-US' }, lazy: true } as const
 
 // ─── Movie Lists ────────────────────────────────────────────
 
 export function useTrendingMovies() {
-  return useAsyncData('trending-movies', () =>
-    tmdbFetch<TmdbListResponse>('trending/movie/week'),
-  )
+  return useFetch<TmdbListResponse>('/api/tmdb/trending/movie/week', {
+    key: 'trending-movies',
+    ...defaultOpts,
+  })
 }
 
 export function usePopularMovies() {
-  return useAsyncData('popular-movies', () =>
-    tmdbFetch<TmdbListResponse>('movie/popular'),
-  )
+  return useFetch<TmdbListResponse>('/api/tmdb/movie/popular', {
+    key: 'popular-movies',
+    ...defaultOpts,
+  })
 }
 
 export function useTopRatedMovies() {
-  return useAsyncData('top-rated-movies', () =>
-    tmdbFetch<TmdbListResponse>('movie/top_rated'),
-  )
+  return useFetch<TmdbListResponse>('/api/tmdb/movie/top_rated', {
+    key: 'top-rated-movies',
+    ...defaultOpts,
+  })
 }
 
 export function useUpcomingMovies() {
-  return useAsyncData('upcoming-movies', () =>
-    tmdbFetch<TmdbListResponse>('movie/upcoming'),
-  )
+  return useFetch<TmdbListResponse>('/api/tmdb/movie/upcoming', {
+    key: 'upcoming-movies',
+    ...defaultOpts,
+  })
 }
 
 export function useNowPlayingMovies() {
-  return useAsyncData('now-playing-movies', () =>
-    tmdbFetch<TmdbListResponse>('movie/now_playing'),
-  )
+  return useFetch<TmdbListResponse>('/api/tmdb/movie/now_playing', {
+    key: 'now-playing-movies',
+    ...defaultOpts,
+  })
 }
 
 // ─── Supporting Data ────────────────────────────────────────
 
 export function useMovieGenres() {
-  return useAsyncData('movie-genres', () =>
-    tmdbFetch<TmdbGenreResponse>('genre/movie/list'),
-  )
+  return useFetch<TmdbGenreResponse>('/api/tmdb/genre/movie/list', {
+    key: 'movie-genres',
+    ...defaultOpts,
+  })
 }
 
 export function useMovieVideos(movieId: number) {
-  return useAsyncData(`movie-videos-${movieId}`, () =>
-    tmdbFetch<TmdbVideosResponse>(`movie/${movieId}/videos`),
-  )
+  return useFetch<TmdbVideosResponse>(`/api/tmdb/movie/${movieId}/videos`, {
+    key: `movie-videos-${movieId}`,
+    ...defaultOpts,
+  })
 }
 
 // ─── Movie Details ──────────────────────────────────────────
@@ -140,47 +142,47 @@ interface TmdbCreditsResponse {
 }
 
 export function useMovieDetail(movieId: Ref<number | null>) {
-  return useAsyncData(
-    () => `movie-detail-${movieId.value}`,
-    () => {
-      if (!movieId.value) return Promise.resolve(null)
-      return tmdbFetch<TmdbMovieDetail>(`movie/${movieId.value}`)
-    },
-    { watch: [movieId] },
+  const url = computed(() =>
+    movieId.value ? `/api/tmdb/movie/${movieId.value}` : undefined,
   )
+  return useFetch<TmdbMovieDetail>(url as ComputedRef<string>, {
+    key: computed(() => `movie-detail-${movieId.value}`) as unknown as string,
+    ...defaultOpts,
+    watch: [movieId],
+  })
 }
 
 export function useMovieCredits(movieId: Ref<number | null>) {
-  return useAsyncData(
-    () => `movie-credits-${movieId.value}`,
-    () => {
-      if (!movieId.value) return Promise.resolve(null)
-      return tmdbFetch<TmdbCreditsResponse>(`movie/${movieId.value}/credits`)
-    },
-    { watch: [movieId] },
+  const url = computed(() =>
+    movieId.value ? `/api/tmdb/movie/${movieId.value}/credits` : undefined,
   )
+  return useFetch<TmdbCreditsResponse>(url as ComputedRef<string>, {
+    key: computed(() => `movie-credits-${movieId.value}`) as unknown as string,
+    ...defaultOpts,
+    watch: [movieId],
+  })
 }
 
 export function useSimilarMovies(movieId: Ref<number | null>) {
-  return useAsyncData(
-    () => `similar-movies-${movieId.value}`,
-    () => {
-      if (!movieId.value) return Promise.resolve(null)
-      return tmdbFetch<TmdbListResponse>(`movie/${movieId.value}/similar`)
-    },
-    { watch: [movieId] },
+  const url = computed(() =>
+    movieId.value ? `/api/tmdb/movie/${movieId.value}/similar` : undefined,
   )
+  return useFetch<TmdbListResponse>(url as ComputedRef<string>, {
+    key: computed(() => `similar-movies-${movieId.value}`) as unknown as string,
+    ...defaultOpts,
+    watch: [movieId],
+  })
 }
 
 export function useMovieVideosDynamic(movieId: Ref<number | null>) {
-  return useAsyncData(
-    () => `movie-videos-dynamic-${movieId.value}`,
-    () => {
-      if (!movieId.value) return Promise.resolve(null)
-      return tmdbFetch<TmdbVideosResponse>(`movie/${movieId.value}/videos`)
-    },
-    { watch: [movieId] },
+  const url = computed(() =>
+    movieId.value ? `/api/tmdb/movie/${movieId.value}/videos` : undefined,
   )
+  return useFetch<TmdbVideosResponse>(url as ComputedRef<string>, {
+    key: computed(() => `movie-videos-dynamic-${movieId.value}`) as unknown as string,
+    ...defaultOpts,
+    watch: [movieId],
+  })
 }
 
 // ─── TV Show Types ──────────────────────────────────────────
@@ -208,94 +210,146 @@ export interface TmdbTvDetail extends TmdbTvShow {
   episode_run_time: number[]
   status: string
   tagline: string
+  seasons: {
+    id: number
+    season_number: number
+    name: string
+    episode_count: number
+    air_date: string | null
+    poster_path: string | null
+    overview: string
+  }[]
+}
+
+export interface TmdbEpisode {
+  id: number
+  name: string
+  overview: string
+  episode_number: number
+  season_number: number
+  air_date: string | null
+  still_path: string | null
+  vote_average: number
+  runtime: number | null
+}
+
+export interface TmdbSeasonDetail {
+  id: number
+  name: string
+  overview: string
+  season_number: number
+  episodes: TmdbEpisode[]
 }
 
 // ─── TV Show Lists ──────────────────────────────────────────
 
 export function useTrendingTvShows() {
-  return useAsyncData('trending-tv', () =>
-    tmdbFetch<TmdbListResponse<TmdbTvShow>>('trending/tv/week'),
-  )
+  return useFetch<TmdbListResponse<TmdbTvShow>>('/api/tmdb/trending/tv/week', {
+    key: 'trending-tv',
+    ...defaultOpts,
+  })
 }
 
 export function usePopularTvShows() {
-  return useAsyncData('popular-tv', () =>
-    tmdbFetch<TmdbListResponse<TmdbTvShow>>('tv/popular'),
-  )
+  return useFetch<TmdbListResponse<TmdbTvShow>>('/api/tmdb/tv/popular', {
+    key: 'popular-tv',
+    ...defaultOpts,
+  })
 }
 
 export function useTopRatedTvShows() {
-  return useAsyncData('top-rated-tv', () =>
-    tmdbFetch<TmdbListResponse<TmdbTvShow>>('tv/top_rated'),
-  )
+  return useFetch<TmdbListResponse<TmdbTvShow>>('/api/tmdb/tv/top_rated', {
+    key: 'top-rated-tv',
+    ...defaultOpts,
+  })
 }
 
 export function useAiringTodayTvShows() {
-  return useAsyncData('airing-today-tv', () =>
-    tmdbFetch<TmdbListResponse<TmdbTvShow>>('tv/airing_today'),
-  )
+  return useFetch<TmdbListResponse<TmdbTvShow>>('/api/tmdb/tv/airing_today', {
+    key: 'airing-today-tv',
+    ...defaultOpts,
+  })
 }
 
 export function useOnTheAirTvShows() {
-  return useAsyncData('on-the-air-tv', () =>
-    tmdbFetch<TmdbListResponse<TmdbTvShow>>('tv/on_the_air'),
-  )
+  return useFetch<TmdbListResponse<TmdbTvShow>>('/api/tmdb/tv/on_the_air', {
+    key: 'on-the-air-tv',
+    ...defaultOpts,
+  })
 }
 
 export function useTvGenres() {
-  return useAsyncData('tv-genres', () =>
-    tmdbFetch<TmdbGenreResponse>('genre/tv/list'),
-  )
+  return useFetch<TmdbGenreResponse>('/api/tmdb/genre/tv/list', {
+    key: 'tv-genres',
+    ...defaultOpts,
+  })
 }
 
 // ─── Generic Media Composables (Movie / TV) ─────────────────
 
 export function useMediaDetail(mediaType: Ref<string>, mediaId: Ref<number | null>) {
-  return useAsyncData(
-    () => `${mediaType.value}-detail-${mediaId.value}`,
-    () => {
-      if (!mediaId.value) return Promise.resolve(null)
-      const type = mediaType.value === 'tv' ? 'tv' : 'movie'
-      return tmdbFetch<any>(`${type}/${mediaId.value}`)
-    },
-    { watch: [mediaId, mediaType] },
-  )
+  const url = computed(() => {
+    if (!mediaId.value) return undefined
+    const type = mediaType.value === 'tv' ? 'tv' : 'movie'
+    return `/api/tmdb/${type}/${mediaId.value}`
+  })
+  return useFetch<any>(url as ComputedRef<string>, {
+    key: computed(() => `${mediaType.value}-detail-${mediaId.value}`) as unknown as string,
+    ...defaultOpts,
+    watch: [mediaId, mediaType],
+  })
 }
 
 export function useMediaCredits(mediaType: Ref<string>, mediaId: Ref<number | null>) {
-  return useAsyncData(
-    () => `${mediaType.value}-credits-${mediaId.value}`,
-    () => {
-      if (!mediaId.value) return Promise.resolve(null)
-      const type = mediaType.value === 'tv' ? 'tv' : 'movie'
-      return tmdbFetch<TmdbCreditsResponse>(`${type}/${mediaId.value}/credits`)
-    },
-    { watch: [mediaId, mediaType] },
-  )
+  const url = computed(() => {
+    if (!mediaId.value) return undefined
+    const type = mediaType.value === 'tv' ? 'tv' : 'movie'
+    return `/api/tmdb/${type}/${mediaId.value}/credits`
+  })
+  return useFetch<TmdbCreditsResponse>(url as ComputedRef<string>, {
+    key: computed(() => `${mediaType.value}-credits-${mediaId.value}`) as unknown as string,
+    ...defaultOpts,
+    watch: [mediaId, mediaType],
+  })
 }
 
 export function useMediaSimilar(mediaType: Ref<string>, mediaId: Ref<number | null>) {
-  return useAsyncData(
-    () => `${mediaType.value}-similar-${mediaId.value}`,
-    () => {
-      if (!mediaId.value) return Promise.resolve(null)
-      const type = mediaType.value === 'tv' ? 'tv' : 'movie'
-      return tmdbFetch<TmdbListResponse>(`${type}/${mediaId.value}/similar`)
-    },
-    { watch: [mediaId, mediaType] },
-  )
+  const url = computed(() => {
+    if (!mediaId.value) return undefined
+    const type = mediaType.value === 'tv' ? 'tv' : 'movie'
+    return `/api/tmdb/${type}/${mediaId.value}/similar`
+  })
+  return useFetch<TmdbListResponse>(url as ComputedRef<string>, {
+    key: computed(() => `${mediaType.value}-similar-${mediaId.value}`) as unknown as string,
+    ...defaultOpts,
+    watch: [mediaId, mediaType],
+  })
 }
 
 export function useMediaVideos(mediaType: Ref<string>, mediaId: Ref<number | null>) {
-  return useAsyncData(
-    () => `${mediaType.value}-videos-${mediaId.value}`,
-    () => {
-      if (!mediaId.value) return Promise.resolve(null)
-      const type = mediaType.value === 'tv' ? 'tv' : 'movie'
-      return tmdbFetch<TmdbVideosResponse>(`${type}/${mediaId.value}/videos`)
-    },
-    { watch: [mediaId, mediaType] },
+  const url = computed(() => {
+    if (!mediaId.value) return undefined
+    const type = mediaType.value === 'tv' ? 'tv' : 'movie'
+    return `/api/tmdb/${type}/${mediaId.value}/videos`
+  })
+  return useFetch<TmdbVideosResponse>(url as ComputedRef<string>, {
+    key: computed(() => `${mediaType.value}-videos-${mediaId.value}`) as unknown as string,
+    ...defaultOpts,
+    watch: [mediaId, mediaType],
+  })
+}
+
+// ─── TV Season Detail ───────────────────────────────────────
+
+export function useTvSeasonDetail(tvId: Ref<number | null>, seasonNumber: Ref<number>) {
+  const url = computed(() =>
+    tvId.value ? `/api/tmdb/tv/${tvId.value}/season/${seasonNumber.value}` : undefined,
   )
+  return useFetch<TmdbSeasonDetail>(url as ComputedRef<string>, {
+    key: computed(() => `tv-season-${tvId.value}-${seasonNumber.value}`) as unknown as string,
+    ...defaultOpts,
+    watch: [tvId, seasonNumber],
+  })
 }
 
 // ─── Normalization ──────────────────────────────────────────

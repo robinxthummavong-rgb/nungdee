@@ -65,7 +65,7 @@
               </h2>
               <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
                 <NuxtLink
-                  :to="`/play/${modalState.mediaType}/${movie?.id}`"
+                  :to="playLink"
                   class="flex items-center gap-2 px-5 sm:px-7 py-2 sm:py-2.5 bg-white text-surface-900 font-bold rounded-md hover:bg-gray-200 transition-all duration-200 text-sm sm:text-base no-underline"
                   @click="close"
                 >
@@ -120,6 +120,93 @@
             <p class="text-sm sm:text-base text-gray-300 leading-relaxed mb-6">
               {{ movie?.overview }}
             </p>
+
+            <!-- ═══ Season / Episode Picker (TV Only) ═══ -->
+            <div v-if="isTvShow && tvSeasons.length > 0" class="mb-8">
+              <!-- Season Selector -->
+              <div class="flex items-center gap-3 mb-5">
+                <h3 class="text-lg font-bold">Episodes</h3>
+                <div class="relative">
+                  <select
+                    v-model="selectedSeason"
+                    class="appearance-none bg-surface-700 hover:bg-surface-600 text-white text-sm font-medium pl-4 pr-9 py-2 rounded-md border border-white/10 cursor-pointer transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+                  >
+                    <option
+                      v-for="season in tvSeasons"
+                      :key="season.season_number"
+                      :value="season.season_number"
+                    >
+                      {{ season.name }}
+                    </option>
+                  </select>
+                  <Icon name="mdi:chevron-down" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-sm" />
+                </div>
+              </div>
+
+              <!-- Episodes Loading -->
+              <div v-if="seasonPending" class="flex items-center gap-3 py-8 justify-center">
+                <div class="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                <span class="text-sm text-gray-400">Loading episodes...</span>
+              </div>
+
+              <!-- Episodes List -->
+              <div v-else-if="episodes.length > 0" class="space-y-3">
+                <NuxtLink
+                  v-for="ep in episodes"
+                  :key="ep.id"
+                  :to="`/play/tv/${movie?.id}?s=${selectedSeason}&e=${ep.episode_number}`"
+                  class="group/ep flex gap-3 sm:gap-4 p-3 rounded-lg hover:bg-surface-700/60 transition-all duration-200 cursor-pointer no-underline text-inherit"
+                  :class="{ 'bg-surface-700/40 ring-1 ring-primary-500/30': selectedEpisode === ep.episode_number }"
+                  @click="playEpisode(ep.episode_number)"
+                >
+                  <!-- Episode Number -->
+                  <div class="flex items-center justify-center w-7 shrink-0 text-gray-500 text-lg font-medium">
+                    {{ ep.episode_number }}
+                  </div>
+
+                  <!-- Episode Thumbnail -->
+                  <div class="relative w-28 sm:w-36 shrink-0 aspect-video rounded-md overflow-hidden bg-surface-700">
+                    <img
+                      v-if="ep.still_path"
+                      :src="getImageUrl(ep.still_path, 'w300')"
+                      :alt="ep.name"
+                      class="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    <div v-else class="w-full h-full flex items-center justify-center">
+                      <Icon name="mdi:movie-open-outline" class="text-2xl text-gray-600" />
+                    </div>
+                    <!-- Play icon overlay -->
+                    <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover/ep:opacity-100 transition-opacity duration-200 bg-black/40">
+                      <div class="w-9 h-9 flex items-center justify-center rounded-full bg-white/90 text-surface-900">
+                        <Icon name="mdi:play" class="text-lg ml-0.5" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Episode Info -->
+                  <div class="flex-1 min-w-0 py-0.5">
+                    <div class="flex items-start justify-between gap-2 mb-1">
+                      <h4 class="text-sm font-semibold text-gray-200 truncate">
+                        {{ ep.name }}
+                      </h4>
+                      <span v-if="ep.runtime" class="text-xs text-gray-500 shrink-0">
+                        {{ ep.runtime }}m
+                      </span>
+                    </div>
+                    <p class="text-xs text-gray-500 leading-relaxed line-clamp-2">
+                      {{ ep.overview || 'No description available.' }}
+                    </p>
+                  </div>
+                </NuxtLink>
+              </div>
+
+              <!-- No Episodes -->
+              <div v-else class="text-center py-8">
+                <Icon name="mdi:television-off" class="text-3xl text-gray-600 mb-2" />
+                <p class="text-sm text-gray-500">No episodes available for this season.</p>
+              </div>
+            </div>
 
             <!-- Details Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-6 mb-8">
@@ -221,7 +308,7 @@
  */
 import { getImageUrl, formatRating, extractYear } from '~/utils/tmdb'
 import type { TmdbMovie } from '~/composables/useTmdb'
-import { normalizeTvToMovie } from '~/composables/useTmdb'
+import { normalizeTvToMovie, useTvSeasonDetail } from '~/composables/useTmdb'
 
 const { state: modalState, close, open } = useMovieModal()
 
@@ -298,6 +385,61 @@ const similarMoviesList = computed(() => {
     return filtered.map((m: any) => normalizeTvToMovie(m))
   }
   return filtered
+})
+
+// ─── TV Season / Episode Selection ─────────────────────────
+
+const isTvShow = computed(() => mediaType.value === 'tv')
+
+/** Filtered seasons list (exclude specials/season 0 if desired) */
+const tvSeasons = computed(() => {
+  const d = detailData.value
+  if (!d || !isTvShow.value) return []
+  const seasons = d.seasons ?? []
+  // Filter out "Specials" (season 0) unless it's the only season
+  return seasons.filter((s: any) => s.season_number > 0 || seasons.length === 1)
+})
+
+const selectedSeason = ref(1)
+const selectedEpisode = ref(1)
+
+// Reset season/episode when a new TV show is opened
+watch(() => modalState.movie?.id, () => {
+  if (isTvShow.value && tvSeasons.value.length > 0) {
+    selectedSeason.value = tvSeasons.value[0]?.season_number ?? 1
+  } else {
+    selectedSeason.value = 1
+  }
+  selectedEpisode.value = 1
+})
+
+// Also reset episode when season changes
+watch(selectedSeason, () => {
+  selectedEpisode.value = 1
+})
+
+const seasonRef = computed(() => selectedSeason.value)
+const tvIdForSeason = computed(() => isTvShow.value ? movieId.value : null)
+
+const { data: seasonDetailData, pending: seasonPending } = await useTvSeasonDetail(tvIdForSeason, seasonRef)
+
+const episodes = computed(() => {
+  return seasonDetailData.value?.episodes ?? []
+})
+
+
+function playEpisode(epNum: number) {
+  selectedEpisode.value = epNum
+  close()
+}
+
+/** Build the play link — includes season/episode for TV shows */
+const playLink = computed(() => {
+  const base = `/play/${modalState.mediaType}/${movie.value?.id}`
+  if (isTvShow.value) {
+    return `${base}?s=${selectedSeason.value}&e=${selectedEpisode.value}`
+  }
+  return base
 })
 
 // ─── Methods ───────────────────────────────────────────────
